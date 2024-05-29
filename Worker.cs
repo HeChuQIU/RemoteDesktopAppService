@@ -1,4 +1,5 @@
 using Microsoft.Win32;
+using RemoteDesktopAppService.SystemApplication;
 
 namespace RemoteDesktopAppService
 {
@@ -6,17 +7,19 @@ namespace RemoteDesktopAppService
     {
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            while (!stoppingToken.IsCancellationRequested)
-            {
-                if (logger.IsEnabled(LogLevel.Information))
-                {
-                    logger.LogInformation("Worker running at: {time}", DateTimeOffset.Now);
-                    List<string> installedSoftwareList = GetInstalledSoftwareList();
-                    string installedSoftwareListString = string.Join("\n", installedSoftwareList);
-                    logger.LogInformation("Installed software: {installedSoftwareListString}", installedSoftwareListString);
-                }
-                await Task.Delay(100000, stoppingToken);
-            }
+            // while (!stoppingToken.IsCancellationRequested)
+            // {
+            //     if (logger.IsEnabled(LogLevel.Information))
+            //     {
+            //         logger.LogInformation("Worker running at: {time}", DateTimeOffset.Now);
+            //         List<string> installedSoftwareList = GetInstalledSoftwareList();
+            //         string installedSoftwareListString = string.Join("\n", installedSoftwareList);
+            //         logger.LogInformation("Installed software: {installedSoftwareListString}", installedSoftwareListString);
+            //     }
+            //     await Task.Delay(100000, stoppingToken);
+            // }
+            var startMenuApplications = StartMenuApplication.GetStartMenuApplications();
+            var a = 1;
         }
 
         List<string> GetInstalledSoftwareList()
@@ -25,7 +28,8 @@ namespace RemoteDesktopAppService
 
             string displayName;
 
-            using (RegistryKey key = Registry.CurrentUser.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall", false))
+            using (RegistryKey key =
+                   Registry.CurrentUser.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall", false))
             {
                 foreach (String keyName in key.GetSubKeyNames())
                 {
@@ -67,7 +71,9 @@ namespace RemoteDesktopAppService
                 }
             }
 
-            using (RegistryKey key = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall", false))
+            using (RegistryKey key =
+                   Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall",
+                       false))
             {
                 foreach (String keyName in key.GetSubKeyNames())
                 {

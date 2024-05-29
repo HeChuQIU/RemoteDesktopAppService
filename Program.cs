@@ -22,5 +22,6 @@ app.UseCors();
 
 app.MapHub<ChatHub>("/chatHub");
 app.MapHub<RemoteAppHub>("/remoteAppHub");
+app.MapGet("/hello", () => "Hello!");
 
 app.Run();
