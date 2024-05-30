@@ -1,0 +1,109 @@
+@using System.Net.Http
+@using RemoteDesktopAppService
+
+@inject ISnackbar Snackbar
+
+<MudThemeProvider/>
+<MudDialogProvider/>
+<MudSnackbarProvider/>
+
+@code {
+
+    (string? icon, string text) GetConnectionStateInfo(HubConnectionState state)
+    {
+        return state switch
+        {
+            HubConnectionState.Disconnected => (Icons.Material.Filled.LinkOff, "未连接"),
+            HubConnectionState.Connected => (Icons.Material.Filled.Link, "已连接"),
+            HubConnectionState.Connecting => (null, "连接中"),
+            HubConnectionState.Reconnecting => (null, "重连中"),
+            _ => throw new ArgumentOutOfRangeException()
+        };
+    }
+
+}
+
+<MudPaper>
+    <MudButton @onclick="Connection"
+               Disabled="@(_hubConnection.State is HubConnectionState.Connecting or HubConnectionState.Reconnecting)"
+               Variant="Variant.Filled" Color="_hubConnection.State is HubConnectionState.Connected ? Color.Success : Color.Primary">
+        <MudGrid Spacing="2" Justify="Justify.Center">
+            @{
+                var (icon, text) = GetConnectionStateInfo(_hubConnection.State);
+                <MudItem>
+                    @if (icon is not null)
+                    {
+                        <MudIcon Icon="@icon"/>
+                    }
+                    else
+                    {
+                        <MudProgressCircular Size="Size.Small" Color="Color.Secondary" Indeterminate="true"/>
+                    }
+                </MudItem>
+                <MudItem>
+                    <span>@text</span>
+                </MudItem>
+            }
+        </MudGrid>
+    </MudButton>
+</MudPaper>
+
+
+<MudPaper Width="100%">
+    <MudList>
+        @foreach (var item in _remoteApplications)
+        {
+            <MudListItem>
+                <MudListItem>
+                    <MudText Typo="Typo.h6">@item.Name</MudText>
+                </MudListItem>
+            </MudListItem>
+        }
+    </MudList>
+</MudPaper>
+
+@code {
+
+    readonly HubConnection _hubConnection = new HubConnectionBuilder()
+        .WithUrl("http://localhost:5000/clientHub")
+        .Build();
+
+    int _currentCount = 0;
+
+    bool _connected = false;
+
+    List<RemoteApplicationInfo> _remoteApplications = new List<RemoteApplicationInfo>();
+
+    private async void Connection()
+    {
+        try
+        {
+            switch (_hubConnection.State)
+            {
+                case HubConnectionState.Disconnected:
+                    await _hubConnection.StartAsync();
+                    await _hubConnection.InvokeAsync("Test");
+                    // var jsons = await _hubConnection.InvokeAsync<string[]>("GetRemoteApplicationInfos");
+                    // _remoteApplications.AddRange(
+                    //     jsons
+                    //     .Select(RemoteApplicationInfo.FromJson));
+                    break;
+                case HubConnectionState.Connected:
+                    await _hubConnection.StopAsync();
+                    break;
+                case HubConnectionState.Connecting:
+                case HubConnectionState.Reconnecting:
+                default:
+                    break;
+            }
+        }
+        catch (HttpRequestException e)
+        {
+            _remoteApplications.Clear();
+            Snackbar.Add(e.Message, Severity.Error);
+        }
+
+        await InvokeAsync(StateHasChanged);
+    }
+
+}

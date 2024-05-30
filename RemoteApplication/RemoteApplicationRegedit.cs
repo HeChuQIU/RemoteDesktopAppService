@@ -1,15 +1,20 @@
-﻿using Microsoft.Win32;
+﻿using System.Security.Cryptography;
+using System.Text;
+using Microsoft.Win32;
 using RemoteDesktopAppService.Shared;
 
 namespace RemoteDesktopAppService.RemoteApplication;
 
-public class RemoteApplicationRegedit(string prefix)
+public class RemoteApplicationRegedit
 {
     public static readonly string RegistryPath =
         @"SOFTWARE\Microsoft\Windows NT\CurrentVersion\Terminal Server\TSAppAllowList\Applications";
 
+    public static readonly string HashKeyName = "RemoteDesktopAppServiceHash";
+
     private readonly RegistryKey _baseKey =
-        Registry.LocalMachine.OpenSubKey(RegistryPath) ?? throw new InvalidOperationException();
+        Registry.LocalMachine.OpenSubKey(RegistryPath, RegistryKeyPermissionCheck.ReadWriteSubTree) ??
+        throw new InvalidOperationException();
 
     private readonly List<RemoteApplicationInfo> _registryRemoteApps = [];
 
@@ -18,8 +23,7 @@ public class RemoteApplicationRegedit(string prefix)
     public void Load()
     {
         _registryRemoteApps.Clear();
-        _baseKey.GetSubKeyNames()
-            .Where(s => s.StartsWith(prefix))
+        GetSubKeysHasHashKeyName()
             .Select(s => _baseKey.OpenSubKey(s) ?? throw new InvalidOperationException())
             .Select(subKey => new RemoteApplicationInfo(
                 subKey.GetValue("Name") as string,
@@ -33,16 +37,22 @@ public class RemoteApplicationRegedit(string prefix)
             )).ToList().ForEach(_registryRemoteApps.Add);
     }
 
+    public void RemoveAllRemoteAppsInRegistry()
+    {
+        GetSubKeysHasHashKeyName().ToList().ForEach(_baseKey.DeleteSubKeyTree);
+    }
+
     public void Save()
     {
-        var toUpdateKeysName = _baseKey.GetSubKeyNames().Where(s => s.StartsWith(prefix))
-            .ExceptBy(_registryRemoteApps.Select(info => info.GetHashCode().ToString()), s => s[prefix.Length..])
+        var toUpdateKeys = GetSubKeysHasHashKey()
+            .ExceptBy(_registryRemoteApps.Select(info => info.ComputeHash().ToString()), key => key.GetValue(HashKeyName)?? throw new InvalidOperationException())
             .ToList();
-        toUpdateKeysName.ForEach(_baseKey.DeleteSubKeyTree);
-        _registryRemoteApps.ExceptBy(toUpdateKeysName, info => $"{prefix}{info.GetHashCode().ToString()}").ToList()
+
+        toUpdateKeys.Select(key => key.Name.Split(@"\")[^1]).ToList().ForEach(_baseKey.DeleteSubKeyTree);
+        _registryRemoteApps.ExceptBy(toUpdateKeys.Select(key => key.GetValue(HashKeyName)), info => info.ComputeHash().ToString()).ToList()
             .ForEach(remoteApp =>
             {
-                using var subKey = _baseKey.CreateSubKey($"{prefix}{remoteApp.GetHashCode()}");
+                using var subKey = _baseKey.CreateSubKey(remoteApp.Name);
                 subKey.SetValue("Name", remoteApp.Name);
                 subKey.SetValue("Path", remoteApp.Path);
                 subKey.SetValue("VPath", remoteApp.VPath);
@@ -51,6 +61,13 @@ public class RemoteApplicationRegedit(string prefix)
                 subKey.SetValue("IconPath", remoteApp.IconPath);
                 subKey.SetValue("IconIndex", remoteApp.IconIndex);
                 subKey.SetValue("ShowInTSWA", remoteApp.TSWA);
+                subKey.SetValue(HashKeyName, remoteApp.ComputeHash().ToString());
             });
     }
+
+    private IEnumerable<string> GetSubKeysHasHashKeyName() =>
+        _baseKey.GetSubKeyNames().Where(s => _baseKey.OpenSubKey(s)?.GetValueNames().Contains(HashKeyName) == true);
+
+    private IEnumerable<RegistryKey> GetSubKeysHasHashKey() => GetSubKeysHasHashKeyName()
+        .Select(s => _baseKey.OpenSubKey(s) ?? throw new InvalidOperationException());
 }

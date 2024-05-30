@@ -5,7 +5,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UserSecretsId>dotnet-RemoteDesktopAppService-03d9ec7b-3cd7-4e2b-a696-0a0eb34955cb</UserSecretsId>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net8.0-windows8.0</TargetFramework>
+    <TargetFramework>net8.0-windows</TargetFramework>
   </PropertyGroup>
   <PropertyGroup>
     <ApplicationManifest>app.manifest</ApplicationManifest>
@@ -17,23 +17,38 @@
   
   <ItemGroup>
     <Compile Remove="remoteapplib\**" />
+    <Compile Remove="RemoteDesktopAppServiceWpf\**" />
   </ItemGroup>
   
   <ItemGroup>
     <EmbeddedResource Remove="remoteapplib\**" />
+    <EmbeddedResource Remove="RemoteDesktopAppServiceWpf\**" />
   </ItemGroup>
   
   <ItemGroup>
     <Content Remove="remoteapplib\**" />
+    <Content Remove="RemoteDesktopAppServiceWpf\**" />
   </ItemGroup>
   
   <ItemGroup>
     <None Remove="remoteapplib\**" />
+    <None Remove="RemoteDesktopAppServiceWpf\**" />
   </ItemGroup>
   
   <ItemGroup>
     <_ContentIncludedByDefault Remove="remoteapplib\App.config" />
     <_ContentIncludedByDefault Remove="remoteapplib\bin\Debug\RemoteAppLib.dll.config" />
+    <_ContentIncludedByDefault Remove="RemoteDesktopAppServiceWpf\bin\Debug\net8.0-windows\RemoteDesktopAppServiceWpf.deps.json" />
+    <_ContentIncludedByDefault Remove="RemoteDesktopAppServiceWpf\bin\Debug\net8.0-windows\RemoteDesktopAppServiceWpf.runtimeconfig.json" />
+    <_ContentIncludedByDefault Remove="RemoteDesktopAppServiceWpf\bin\Debug\net8.0-windows\RemoteDesktopAppServiceWpf.staticwebassets.runtime.json" />
+    <_ContentIncludedByDefault Remove="RemoteDesktopAppServiceWpf\obj\Debug\net8.0-windows\staticwebassets.build.json" />
+    <_ContentIncludedByDefault Remove="RemoteDesktopAppServiceWpf\obj\Debug\net8.0-windows\staticwebassets.development.json" />
+    <_ContentIncludedByDefault Remove="RemoteDesktopAppServiceWpf\obj\Debug\net8.0-windows\staticwebassets.pack.json" />
+    <_ContentIncludedByDefault Remove="RemoteDesktopAppServiceWpf\obj\project.assets.json" />
+    <_ContentIncludedByDefault Remove="RemoteDesktopAppServiceWpf\obj\project.packagespec.json" />
+    <_ContentIncludedByDefault Remove="RemoteDesktopAppServiceWpf\obj\RemoteDesktopAppServiceWpf.csproj.nuget.dgspec.json" />
+    <_ContentIncludedByDefault Remove="RemoteDesktopAppServiceWpf\Counter.razor" />
+    <_ContentIncludedByDefault Remove="RemoteDesktopAppServiceWpf\_Imports.razor" />
   </ItemGroup>
   
   <ItemGroup>

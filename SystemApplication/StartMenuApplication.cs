@@ -4,7 +4,10 @@ using File = System.IO.File;
 
 namespace RemoteDesktopAppService.SystemApplication;
 
-public record StartMenuApplication(string Name, string ExecutablePath, string ShortcutPathAfterStartMenu)
+public record StartMenuApplication(
+    string Name,
+    string ExecutablePath,
+    string ShortcutPathAfterStartMenu)
 {
     public static readonly string StartMenuPath =
         Environment.GetFolderPath(Environment.SpecialFolder.CommonStartMenu) + @"\Programs";
@@ -22,14 +25,15 @@ public record StartMenuApplication(string Name, string ExecutablePath, string Sh
             {
                 r.startMenuPath,
                 r.startMenuShortcutPath,
-                ExecutablePath = GetShortcutTargetFile(r.startMenuShortcutPath)
+                ShortcutInfo = GetShortcut(r.startMenuShortcutPath)
             })
-            .Where(r => r.ExecutablePath.EndsWith(".exe") && File.Exists(r.ExecutablePath))
+            .Where(r => r.ShortcutInfo.TargetPath.EndsWith(".exe") && File.Exists(r.ShortcutInfo.TargetPath))
+            .Where(r => r.ShortcutInfo.Arguments.Length == 0)
             .Select(r => new
             {
                 Name = Path.GetFileNameWithoutExtension(r.startMenuShortcutPath),
-                r.ExecutablePath,
-                startMenuShortcutPathAfterStartMenu = r.startMenuShortcutPath[r.startMenuPath.Length..]
+                ExecutablePath = r.ShortcutInfo.TargetPath,
+                startMenuShortcutPathAfterStartMenu = r.startMenuShortcutPath[r.startMenuPath.Length..],
             })
             .Select(t => new StartMenuApplication(t.Name, t.ExecutablePath,
                 t.startMenuShortcutPathAfterStartMenu))
@@ -38,13 +42,13 @@ public record StartMenuApplication(string Name, string ExecutablePath, string Sh
 
     public RemoteApplicationInfo CreateRemoteApplicationInfo()
     {
-        return new RemoteApplicationInfo(Name, ExecutablePath, ShortcutPathAfterStartMenu, "", 0, ExecutablePath, 0, 0);
+        return new RemoteApplicationInfo(Name, ExecutablePath, ExecutablePath, "", 0, ExecutablePath, 0, 0);
     }
 
-    public static string GetShortcutTargetFile(string shortcutFilename)
+    public static IWshShortcut GetShortcut(string shortcutFilename)
     {
         WshShell shell = new WshShell();
         IWshShortcut link = (IWshShortcut)shell.CreateShortcut(shortcutFilename);
-        return link.TargetPath;
+        return link;
     }
 }

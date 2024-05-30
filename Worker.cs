@@ -1,4 +1,5 @@
 using Microsoft.Win32;
+using RemoteDesktopAppService.RemoteApplication;
 using RemoteDesktopAppService.SystemApplication;
 
 namespace RemoteDesktopAppService
@@ -19,74 +20,17 @@ namespace RemoteDesktopAppService
             //     await Task.Delay(100000, stoppingToken);
             // }
             var startMenuApplications = StartMenuApplication.GetStartMenuApplications();
-            var a = 1;
-        }
+            var remoteApplicationRegedit = new RemoteApplicationRegedit();
 
-        List<string> GetInstalledSoftwareList()
-        {
-            List<string> gInstalledSoftware = new();
+            // remoteApplicationRegedit.RemoveAllRemoteAppsInRegistry();
 
-            string displayName;
+            remoteApplicationRegedit.Load();
+            var remoteApplications = remoteApplicationRegedit.RegistryRemoteApps;
 
-            using (RegistryKey key =
-                   Registry.CurrentUser.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall", false))
-            {
-                foreach (String keyName in key.GetSubKeyNames())
-                {
-                    RegistryKey subkey = key.OpenSubKey(keyName);
-                    displayName = subkey.GetValue("DisplayName") as string;
-                    if (string.IsNullOrEmpty(displayName))
-                        continue;
-
-                    gInstalledSoftware.Add(displayName.ToLower());
-                }
-            }
-
-            //using (RegistryKey key = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall", false))
-            using (var localMachine = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry64))
-            {
-                var key = localMachine.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall", false);
-                foreach (String keyName in key.GetSubKeyNames())
-                {
-                    RegistryKey subkey = key.OpenSubKey(keyName);
-                    displayName = subkey.GetValue("DisplayName") as string;
-                    if (string.IsNullOrEmpty(displayName))
-                        continue;
-
-                    gInstalledSoftware.Add(displayName.ToLower());
-                }
-            }
-
-            using (var localMachine = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry32))
-            {
-                var key = localMachine.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall", false);
-                foreach (String keyName in key.GetSubKeyNames())
-                {
-                    RegistryKey subkey = key.OpenSubKey(keyName);
-                    displayName = subkey.GetValue("DisplayName") as string;
-                    if (string.IsNullOrEmpty(displayName))
-                        continue;
-
-                    gInstalledSoftware.Add(displayName.ToLower());
-                }
-            }
-
-            using (RegistryKey key =
-                   Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall",
-                       false))
-            {
-                foreach (String keyName in key.GetSubKeyNames())
-                {
-                    RegistryKey subkey = key.OpenSubKey(keyName);
-                    displayName = subkey.GetValue("DisplayName") as string;
-                    if (string.IsNullOrEmpty(displayName))
-                        continue;
-
-                    gInstalledSoftware.Add(displayName.ToLower());
-                }
-            }
-
-            return gInstalledSoftware;
+            remoteApplicationRegedit.RegistryRemoteApps.Clear();
+            remoteApplicationRegedit.RegistryRemoteApps.AddRange(
+                startMenuApplications.Select(app => app.CreateRemoteApplicationInfo()));
+            remoteApplicationRegedit.Save();
         }
     }
 }

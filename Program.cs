@@ -20,7 +20,7 @@ var app = builder.Build();
 
 app.UseCors();
 
-app.MapHub<ChatHub>("/chatHub");
+app.MapHub<ClientHub>("/clientHub");
 app.MapHub<RemoteAppHub>("/remoteAppHub");
 app.MapGet("/hello", () => "Hello!");
 
