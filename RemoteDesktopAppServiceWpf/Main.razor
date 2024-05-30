@@ -82,11 +82,8 @@
             {
                 case HubConnectionState.Disconnected:
                     await _hubConnection.StartAsync();
-                    await _hubConnection.InvokeAsync("Test");
-                    // var jsons = await _hubConnection.InvokeAsync<string[]>("GetRemoteApplicationInfos");
-                    // _remoteApplications.AddRange(
-                    //     jsons
-                    //     .Select(RemoteApplicationInfo.FromJson));
+                    var apps = await _hubConnection.InvokeAsync<RemoteApplicationInfo[]>("GetRemoteApplicationInfos");
+                    _remoteApplications.AddRange(apps);
                     break;
                 case HubConnectionState.Connected:
                     await _hubConnection.StopAsync();

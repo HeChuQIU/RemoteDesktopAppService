@@ -30,6 +30,12 @@ public record RemoteApplicationInfo
         TSWA = tSWA ?? 0;
     }
 
+
+
+    public RemoteApplicationInfo()
+    {
+    }
+
     public string Name { get; set; } = string.Empty;
     public string Path { get; set; } = string.Empty;
     public string VPath { get; set; } = string.Empty;

@@ -6,11 +6,11 @@ namespace RemoteDesktopAppService;
 
 public class ClientHub : Hub<IClientHub>
 {
-    public async Task<string[]> GetRemoteApplicationInfos()
+    public async Task<RemoteApplicationInfo[]> GetRemoteApplicationInfos()
     {
         var remoteApplicationRegedit = new RemoteApplicationRegedit();
         await Task.Run(remoteApplicationRegedit.Load);
-        return remoteApplicationRegedit.RegistryRemoteApps.Select(RemoteApplicationInfo.ToJson).ToArray();
+        return remoteApplicationRegedit.RegistryRemoteApps.ToArray();
     }
 
     public void Test()

@@ -14,7 +14,7 @@ public class RemoteApplicationRegedit
 
     private readonly RegistryKey _baseKey =
         Registry.LocalMachine.OpenSubKey(RegistryPath, RegistryKeyPermissionCheck.ReadWriteSubTree) ??
-        throw new InvalidOperationException();
+        Registry.LocalMachine.CreateSubKey(RegistryPath, RegistryKeyPermissionCheck.ReadWriteSubTree);
 
     private readonly List<RemoteApplicationInfo> _registryRemoteApps = [];
 
