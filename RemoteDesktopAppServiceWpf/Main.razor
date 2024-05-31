@@ -1,5 +1,12 @@
+@using System.Drawing
 @using System.Net.Http
-@using RemoteDesktopAppService
+@using RemoteDesktopAppService.SystemApplication
+@using System.IO
+@using System.Reactive.Linq
+@using System.Reactive.Subjects
+@using System.Windows.Documents
+@using Color = MudBlazor.Color
+@using Size = MudBlazor.Size
 
 @inject ISnackbar Snackbar
 
@@ -23,44 +30,62 @@
 
 }
 
-<MudPaper>
-    <MudButton @onclick="Connection"
-               Disabled="@(_hubConnection.State is HubConnectionState.Connecting or HubConnectionState.Reconnecting)"
-               Variant="Variant.Filled" Color="_hubConnection.State is HubConnectionState.Connected ? Color.Success : Color.Primary">
-        <MudGrid Spacing="2" Justify="Justify.Center">
-            @{
-                var (icon, text) = GetConnectionStateInfo(_hubConnection.State);
-                <MudItem>
-                    @if (icon is not null)
-                    {
-                        <MudIcon Icon="@icon"/>
-                    }
-                    else
-                    {
-                        <MudProgressCircular Size="Size.Small" Color="Color.Secondary" Indeterminate="true"/>
-                    }
-                </MudItem>
-                <MudItem>
-                    <span>@text</span>
-                </MudItem>
-            }
-        </MudGrid>
-    </MudButton>
-</MudPaper>
 
-
-<MudPaper Width="100%">
-    <MudList>
-        @foreach (var item in _remoteApplications)
-        {
-            <MudListItem>
-                <MudListItem>
-                    <MudText Typo="Typo.h6">@item.Name</MudText>
-                </MudListItem>
-            </MudListItem>
+<MudButton @onclick="Connection"
+           Disabled="@(_hubConnection.State is HubConnectionState.Connecting or HubConnectionState.Reconnecting)"
+           Variant="Variant.Filled" Color="_hubConnection.State is HubConnectionState.Connected ? Color.Success : Color.Primary">
+    <MudGrid Spacing="2" Justify="Justify.Center">
+        @{
+            var (icon, text) = GetConnectionStateInfo(_hubConnection.State);
+            <MudItem>
+                @if (icon is not null)
+                {
+                    <MudIcon Icon="@icon"/>
+                }
+                else
+                {
+                    <MudProgressCircular Size="Size.Small" Color="Color.Secondary" Indeterminate="true"/>
+                }
+            </MudItem>
+            <MudItem>
+                <span>@text</span>
+            </MudItem>
         }
-    </MudList>
-</MudPaper>
+    </MudGrid>
+</MudButton>
+
+<MudTextField @bind-Value="@_searchText" TextChanged="s => _searchSubject.OnNext(s)"
+              Label="搜索" Variant="Variant.Outlined"
+              Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Filled.Search"
+              HelperText="@_filterText"
+              Class="pa-2"/>
+
+<MudList>
+    @foreach (var item in _startMenuApplications
+                  .Where(a => a.Name.StartsWith(_filterText))
+                  .OrderBy(a => a.Name))
+    {
+        var toBeRemote = _appToRemote.Contains(item);
+        <MudListItem Class="pa-2">
+            <MudPaper Elevation="3" Class="border-2 border-dashed" Style="@($"border-color:{(toBeRemote ? Colors.Green.Default : Colors.Red.Default)};")">
+                <MudGrid Spacing="2" Justify="Justify.FlexStart" Class="align-center pl-4">
+                    <MudItem>
+                        <MudImage Src="@($"data:image/png;base64,{BitmapToBase64(GetIconFromExe(item.ExecutablePath))}")"/>
+                    </MudItem>
+                    <MudItem>
+                        <MudStack Spacing="0">
+                            @item.Name
+                            <MudText Typo="Typo.body2" Style="@($"color:{Colors.Grey.Default};")">@item.ExecutablePath</MudText>
+                        </MudStack>
+                    </MudItem>
+                    <MudItem Class="d-flex flex-grow-1 justify-end">
+                        <MudSwitch @bind-Value="toBeRemote" ValueChanged="b => toBeRemote = b" Label=@(toBeRemote ? "已启用" : "已禁用") Color="Color.Primary"></MudSwitch>
+                    </MudItem>
+                </MudGrid>
+            </MudPaper>
+        </MudListItem>
+    }
+</MudList>
 
 @code {
 
@@ -68,11 +93,25 @@
         .WithUrl("http://localhost:5000/clientHub")
         .Build();
 
-    int _currentCount = 0;
+    readonly List<StartMenuApplication> _startMenuApplications = new();
+    readonly List<StartMenuApplication> _appToRemote = new();
 
-    bool _connected = false;
+    string _searchText = string.Empty;
+    string _filterText = string.Empty;
 
-    List<RemoteApplicationInfo> _remoteApplications = new List<RemoteApplicationInfo>();
+    Subject<string> _searchSubject = new();
+
+    protected override void OnInitialized()
+    {
+        _searchSubject
+            .Throttle(TimeSpan.FromMilliseconds(500))
+            .Subscribe(text =>
+            {
+                _filterText = text;
+                InvokeAsync(StateHasChanged);
+            });
+        Connection();
+    }
 
     private async void Connection()
     {
@@ -82,10 +121,11 @@
             {
                 case HubConnectionState.Disconnected:
                     await _hubConnection.StartAsync();
-                    var apps = await _hubConnection.InvokeAsync<RemoteApplicationInfo[]>("GetRemoteApplicationInfos");
-                    _remoteApplications.AddRange(apps);
+                    var apps = await _hubConnection.InvokeAsync<StartMenuApplication[]>("GetStartMenuApplications");
+                    _startMenuApplications.AddRange(apps);
                     break;
                 case HubConnectionState.Connected:
+                    _startMenuApplications.Clear();
                     await _hubConnection.StopAsync();
                     break;
                 case HubConnectionState.Connecting:
@@ -96,11 +136,26 @@
         }
         catch (HttpRequestException e)
         {
-            _remoteApplications.Clear();
+            _startMenuApplications.Clear();
             Snackbar.Add(e.Message, Severity.Error);
         }
 
         await InvokeAsync(StateHasChanged);
     }
 
+    Bitmap? GetIconFromExe(string filePath)
+    {
+        return Icon.ExtractAssociatedIcon(filePath)?.ToBitmap();
+    }
+
+    string BitmapToBase64(Bitmap? bitmap)
+    {
+        if (bitmap is null) return string.Empty;
+        using var memoryStream = new MemoryStream();
+        bitmap.Save(memoryStream, System.Drawing.Imaging.ImageFormat.Png);
+        byte[] bitmapBytes = memoryStream.ToArray();
+        return Convert.ToBase64String(bitmapBytes);
+    }
+
 }
+

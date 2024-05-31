@@ -8,6 +8,7 @@ namespace RemoteDesktopAppService
     {
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
+            return;
             // while (!stoppingToken.IsCancellationRequested)
             // {
             //     if (logger.IsEnabled(LogLevel.Information))
