@@ -71,4 +71,14 @@
   <ItemGroup>
     <ProjectReference Include="remoteapplib\RemoteAppLib.vbproj" />
   </ItemGroup>
+  
+  <ItemGroup>
+    <Reference Include="System.Configuration.ConfigurationManager">
+      <HintPath>..\..\..\..\..\Program Files\dotnet\shared\Microsoft.WindowsDesktop.App\8.0.4\System.Configuration.ConfigurationManager.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+  
+  <ItemGroup>
+    <Folder Include="SystemApplication\" />
+  </ItemGroup>
 </Project>
