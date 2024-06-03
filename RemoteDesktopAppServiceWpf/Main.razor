@@ -59,11 +59,11 @@
               Class="pa-2"/>
 
 <MudList>
-    @foreach (var item in _startMenuApplications
+    @foreach (var item in _localApplicationInfos
                   .Where(a => a.Name.StartsWith(_searchText, true, CultureInfo.CurrentCulture))
                   .OrderBy(a => a.Name))
     {
-        var isToBeRemote = _appToRemote.Contains(item);
+        var isToBeRemote = item.RemoteApp;
         <MudListItem Class="pa-2">
             <MudPaper Elevation="3" Class="border-0 border-dashed" Style="@($"background-color:{(isToBeRemote ? Colors.Green.Lighten5 : Colors.Red.Lighten5)};")">
                 <MudGrid Spacing="2" Justify="Justify.FlexStart" Class="align-center pl-4">
@@ -78,7 +78,7 @@
                     </MudItem>
                     <MudItem Class="d-flex flex-grow-1 justify-end">
                         <MudSwitch @bind-Value:get="isToBeRemote"
-                                   @bind-Value:set="@(b => { if (b) _appToRemote.Add(item);else _appToRemote.Remove(item); _hubConnection.InvokeAsync("SaveApplications", _startMenuApplications); })"
+                                   @bind-Value:set="@(b => { item.RemoteApp = b; SetLocalApplicationInfos(); })"
                                    Label=@(isToBeRemote ? "已启用" : "已禁用") Color="Color.Primary">
                         </MudSwitch>
                     </MudItem>
@@ -91,11 +91,10 @@
 @code {
 
     readonly HubConnection _hubConnection = new HubConnectionBuilder()
-        .WithUrl("http://localhost:5000/clientHub")
+        .WithUrl("http://localhost:5000/hostHub")
         .Build();
 
-    readonly List<LocalApplicationInfo> _startMenuApplications = new();
-    readonly List<LocalApplicationInfo> _appToRemote = new();
+    readonly List<LocalApplicationInfo> _localApplicationInfos = new();
 
     string _searchText = string.Empty;
 
@@ -104,8 +103,7 @@
         _hubConnection.Closed += async ex =>
         {
             if (ex is not null) Snackbar.Add($"连接断开：{ex.Message}", Severity.Error);
-            _startMenuApplications.Clear();
-            _appToRemote.Clear();
+            _localApplicationInfos.Clear();
             await InvokeAsync(StateHasChanged);
         };
 
@@ -118,7 +116,7 @@
         Connection();
     }
 
-    private async void Connection()
+    private async Task Connection()
     {
         try
         {
@@ -128,7 +126,7 @@
                     await _hubConnection.StartAsync();
                     await _hubConnection.InvokeAsync("LoadApplications");
                     var apps = await _hubConnection.InvokeAsync<LocalApplicationInfo[]>("GetLocalApplicationInfos");
-                    _startMenuApplications.AddRange(apps);
+                    _localApplicationInfos.AddRange(apps);
                     break;
                 case HubConnectionState.Connected:
                     await _hubConnection.StopAsync();
@@ -141,11 +139,18 @@
         }
         catch (HttpRequestException e)
         {
-            _startMenuApplications.Clear();
+            _localApplicationInfos.Clear();
             Snackbar.Add(e.Message, Severity.Error);
         }
 
         await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task SetLocalApplicationInfos()
+    {
+        await _hubConnection.InvokeAsync("SetLocalApplicationInfos", _localApplicationInfos);
+        await _hubConnection.InvokeAsync("SaveApplications");
+        await _hubConnection.InvokeAsync("SaveRemoteApplicationToRegistry");
     }
 
     Bitmap? GetIconFromExe(string filePath)
@@ -161,5 +166,4 @@
         byte[] bitmapBytes = memoryStream.ToArray();
         return Convert.ToBase64String(bitmapBytes);
     }
-
 }

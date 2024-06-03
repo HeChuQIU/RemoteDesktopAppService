@@ -1,43 +1,39 @@
-﻿using System.Xml;
-using System.Xml.Serialization;
+﻿using System.Drawing;
 using Microsoft.AspNetCore.SignalR;
 using RemoteDesktopAppService.RemoteApplication;
-using RemoteDesktopAppService.Shared;
 
 namespace RemoteDesktopAppService;
 
-public class ClientHub : Hub<IClientHub>
+public class ClientHub : Hub
 {
-
-
-    public async Task<RemoteApplicationInfo[]> GetRemoteApplicationInfos()
+    public async Task<string[]> GetRemoteApplicationNames()
     {
-        var remoteApplicationRegedit = new RemoteApplicationRegedit();
-        await Task.Run(remoteApplicationRegedit.Load);
-        return remoteApplicationRegedit.RegistryRemoteApps.ToArray();
+        return RemoteApplicationRegedit.RegistryRemoteApps.Select(info => info.Name).ToArray();
     }
 
-    public async Task<LocalApplicationInfo[]> GetLocalApplicationInfos() => LocalApplicationInfo.LocalApplicationInfos.ToArray();
-
-    public async Task SetLocalApplicationInfos(LocalApplicationInfo[] localApplicationInfos)
+    public async Task<string> GetIconBase64OfRemoteApplication(string name)
     {
-        LocalApplicationInfo.LocalApplicationInfos.Clear();
-        LocalApplicationInfo.LocalApplicationInfos.AddRange(localApplicationInfos);
+        var remoteApp = RemoteApplicationRegedit.RegistryRemoteApps.FirstOrDefault(info => info.Name == name);
+        return remoteApp == null ? string.Empty : BitmapToBase64(GetIconFromExe(remoteApp.Path));
     }
 
-    public async Task LoadStartMenuApplications() =>
-        LocalApplicationInfo.LoadStartMenuApplications();
-
-    public async Task LoadApplications() => LocalApplicationInfo.LoadApplications();
-
-    public async Task SaveApplications() => LocalApplicationInfo.SaveApplications();
-
-    public async Task SetRemoteApplicationInfos(RemoteApplicationInfo[] remoteApplicationInfos)
+    public async Task<string[]> GetIconBase64OfRemoteApplications()
     {
+        return RemoteApplicationRegedit.RegistryRemoteApps.Select(info => BitmapToBase64(GetIconFromExe(info.Path)))
+            .ToArray();
     }
-}
 
-public interface IClientHub
-{
-    Task<List<RemoteApplicationInfo>> GetRemoteApplicationInfos();
+    Bitmap? GetIconFromExe(string filePath)
+    {
+        return Icon.ExtractAssociatedIcon(filePath)?.ToBitmap();
+    }
+
+    string BitmapToBase64(Bitmap? bitmap)
+    {
+        if (bitmap is null) return string.Empty;
+        using var memoryStream = new MemoryStream();
+        bitmap.Save(memoryStream, System.Drawing.Imaging.ImageFormat.Png);
+        byte[] bitmapBytes = memoryStream.ToArray();
+        return Convert.ToBase64String(bitmapBytes);
+    }
 }

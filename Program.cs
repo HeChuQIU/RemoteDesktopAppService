@@ -20,8 +20,8 @@ var app = builder.Build();
 
 app.UseCors();
 
+app.MapHub<HostHub>("/hostHub");
 app.MapHub<ClientHub>("/clientHub");
-app.MapHub<RemoteAppHub>("/remoteAppHub");
 app.MapGet("/hello", () => "Hello!");
 
 app.Run();

@@ -1,6 +1,7 @@
 ﻿using System.Xml;
 using System.Xml.Serialization;
 using IWshRuntimeLibrary;
+using RemoteDesktopAppService.RemoteApplication;
 using File = System.IO.File;
 
 namespace RemoteDesktopAppService.Shared;
@@ -14,6 +15,15 @@ public record LocalApplicationInfo(
     {
     }
 
+    static LocalApplicationInfo()
+    {
+        LoadApplications();
+        if (LocalApplicationInfos.Count == 0)
+            LoadStartMenuApplications();
+    }
+
+    public bool RemoteApp { get; set; } = RemoteApp;
+
     private static readonly string LocalApplicationInfoDataPath = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "RemoteDesktopAppService",
         "LocalApplicationInfo.xml");
@@ -25,6 +35,7 @@ public record LocalApplicationInfo(
         Environment.GetFolderPath(Environment.SpecialFolder.StartMenu) + @"\Programs";
 
     public static List<LocalApplicationInfo> LocalApplicationInfos { get; } = [];
+
 
     public static void LoadStartMenuApplications()
     {
@@ -77,6 +88,15 @@ public record LocalApplicationInfo(
         using var writer = XmlWriter.Create(LocalApplicationInfoDataPath, settings);
         var serializer = new XmlSerializer(typeof(LocalApplicationInfo[]));
         serializer.Serialize(writer, LocalApplicationInfos.ToArray());
+    }
+
+    public static void SaveRemoteApplicationToRegistry()
+    {
+        var remoteApplicationInfos =
+            LocalApplicationInfos.Where(t => t.RemoteApp).Select(t => t.CreateRemoteApplicationInfo());
+        RemoteApplicationRegedit.RegistryRemoteApps.Clear();
+        RemoteApplicationRegedit.RegistryRemoteApps.AddRange(remoteApplicationInfos);
+        RemoteApplicationRegedit.Save();
     }
 
     public RemoteApplicationInfo CreateRemoteApplicationInfo()
