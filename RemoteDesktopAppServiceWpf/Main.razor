@@ -15,44 +15,6 @@
 <MudDialogProvider/>
 <MudSnackbarProvider/>
 
-@{
-    (string? icon, string text) GetConnectionStateInfo(HubConnectionState state)
-    {
-        return state switch
-        {
-            HubConnectionState.Disconnected => (Icons.Material.Filled.LinkOff, "未连接"),
-            HubConnectionState.Connected => (Icons.Material.Filled.Link, "已连接"),
-            HubConnectionState.Connecting => (null, "连接中"),
-            HubConnectionState.Reconnecting => (null, "重连中"),
-            _ => throw new ArgumentOutOfRangeException()
-        };
-    }
-}
-
-
-<MudButton @onclick="Connection"
-           Disabled="@(_hubConnection.State is HubConnectionState.Connecting or HubConnectionState.Reconnecting)"
-           Variant="Variant.Filled" Color="_hubConnection.State is HubConnectionState.Connected ? Color.Success : Color.Primary">
-    <MudGrid Spacing="2" Justify="Justify.Center">
-        @{
-            var (icon, text) = GetConnectionStateInfo(_hubConnection.State);
-            <MudItem>
-                @if (icon is not null)
-                {
-                    <MudIcon Icon="@icon"/>
-                }
-                else
-                {
-                    <MudProgressCircular Size="Size.Small" Color="Color.Secondary" Indeterminate="true"/>
-                }
-            </MudItem>
-            <MudItem>
-                <span>@text</span>
-            </MudItem>
-        }
-    </MudGrid>
-</MudButton>
-
 <MudTextField @bind-Value="@_searchText"
               Label="搜索" Variant="Variant.Outlined"
               Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Filled.Search"
@@ -100,68 +62,23 @@
 </MudList>
 
 @code {
-
-    readonly HubConnection _hubConnection = new HubConnectionBuilder()
-        .WithUrl("http://localhost:5000/hostHub")
-        .Build();
-
     readonly List<LocalApplicationInfo> _localApplicationInfos = new();
 
     string _searchText = string.Empty;
 
     protected override void OnInitialized()
     {
-        _hubConnection.Closed += async ex =>
-        {
-            if (ex is not null) Snackbar.Add($"连接断开：{ex.Message}", Severity.Error);
-            _localApplicationInfos.Clear();
-            await InvokeAsync(StateHasChanged);
-        };
-
-        _hubConnection.Reconnected += async connectionId =>
-        {
-            Snackbar.Add("连接已恢复", Severity.Success);
-            await InvokeAsync(StateHasChanged);
-        };
-
-        Connection();
-    }
-
-    private async Task Connection()
-    {
-        try
-        {
-            switch (_hubConnection.State)
-            {
-                case HubConnectionState.Disconnected:
-                    await _hubConnection.StartAsync();
-                    await _hubConnection.InvokeAsync("LoadApplications");
-                    var apps = await _hubConnection.InvokeAsync<LocalApplicationInfo[]>("GetLocalApplicationInfos");
-                    _localApplicationInfos.AddRange(apps);
-                    break;
-                case HubConnectionState.Connected:
-                    await _hubConnection.StopAsync();
-                    break;
-                case HubConnectionState.Connecting:
-                case HubConnectionState.Reconnecting:
-                default:
-                    break;
-            }
-        }
-        catch (HttpRequestException e)
-        {
-            _localApplicationInfos.Clear();
-            Snackbar.Add(e.Message, Severity.Error);
-        }
-
-        await InvokeAsync(StateHasChanged);
+        LocalApplicationInfo.LoadApplications();
+        var apps = LocalApplicationInfo.LocalApplicationInfos.ToArray();
+        _localApplicationInfos.AddRange(apps);
     }
 
     private async Task SetLocalApplicationInfos()
     {
-        await _hubConnection.InvokeAsync("SetLocalApplicationInfos", _localApplicationInfos);
-        await _hubConnection.InvokeAsync("SaveApplications");
-        await _hubConnection.InvokeAsync("SaveRemoteApplicationToRegistry");
+        LocalApplicationInfo.LocalApplicationInfos.Clear();
+        LocalApplicationInfo.LocalApplicationInfos.AddRange(_localApplicationInfos);
+        LocalApplicationInfo.SaveApplications();
+        LocalApplicationInfo.SaveRemoteApplicationToRegistry();
     }
 
     Bitmap? GetIconFromExe(string filePath)

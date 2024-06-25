@@ -40,7 +40,6 @@ public partial class App : Application
 
         host.UseCors();
 
-        host.MapHub<HostHub>("/hostHub");
         host.MapHub<ClientHub>("/clientHub");
         host.MapGet("/hello", () => "Hello!");
         host.RunAsync();
