@@ -70,7 +70,8 @@ public record LocalApplicationInfo(
         if (!serializer.CanDeserialize(reader)) return;
         var localApplicationInfos = serializer.Deserialize(reader) as LocalApplicationInfo[] ?? [];
         LocalApplicationInfos.AddRange(
-            localApplicationInfos.ExceptBy(LocalApplicationInfos.Select(t => t.ExecutablePath), t => t.ExecutablePath));
+            localApplicationInfos.ExceptBy(LocalApplicationInfos.Select(t => t.ExecutablePath), t => t.ExecutablePath)
+        );
     }
 
     public static void SaveApplications()

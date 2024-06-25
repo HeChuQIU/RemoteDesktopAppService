@@ -63,12 +63,22 @@
                   .Where(a => a.Name.StartsWith(_searchText, true, CultureInfo.CurrentCulture))
                   .OrderBy(a => a.Name))
     {
-        var isToBeRemote = item.RemoteApp;
+        var isExists = File.Exists(item.ExecutablePath);
+        var isToBeRemote = isExists && item.RemoteApp;
+
+        var backgroundColor = isExists ? (isToBeRemote ? Colors.Green.Lighten5 : Colors.Red.Lighten5) : Colors.Grey.Lighten5;
         <MudListItem Class="pa-2">
-            <MudPaper Elevation="3" Class="border-0 border-dashed" Style="@($"background-color:{(isToBeRemote ? Colors.Green.Lighten5 : Colors.Red.Lighten5)};")">
+            <MudPaper Elevation="3" Class="border-0 border-dashed" Style="@($"background-color:{backgroundColor};")">
                 <MudGrid Spacing="2" Justify="Justify.FlexStart" Class="align-center pl-4">
                     <MudItem>
-                        <MudImage Src="@($"data:image/png;base64,{BitmapToBase64(GetIconFromExe(item.ExecutablePath))}")"/>
+                        @if (isExists)
+                        {
+                            <MudImage Src="@($"data:image/png;base64,{BitmapToBase64(GetIconFromExe(item.ExecutablePath))}")"/>
+                        }
+                        else
+                        {
+                            <MudIcon Icon="@Icons.Material.Filled.Error" Color="Color.Error"/>
+                        }
                     </MudItem>
                     <MudItem>
                         <MudStack Spacing="0">
@@ -77,7 +87,8 @@
                         </MudStack>
                     </MudItem>
                     <MudItem Class="d-flex flex-grow-1 justify-end">
-                        <MudSwitch @bind-Value:get="isToBeRemote"
+                        <MudSwitch Disabled="@(!isExists)"
+                                   @bind-Value:get="isToBeRemote"
                                    @bind-Value:set="@(b => { item.RemoteApp = b; SetLocalApplicationInfos(); })"
                                    Label=@(isToBeRemote ? "已启用" : "已禁用") Color="Color.Primary">
                         </MudSwitch>
@@ -166,4 +177,5 @@
         byte[] bitmapBytes = memoryStream.ToArray();
         return Convert.ToBase64String(bitmapBytes);
     }
+
 }
