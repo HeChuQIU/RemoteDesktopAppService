@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk.Razor">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
     <PropertyGroup>
         <OutputType>WinExe</OutputType>
@@ -13,16 +13,23 @@
       <PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.2" />
       <PackageReference Include="Microsoft.AspNetCore.Components.WebView.Wpf" Version="8.0.40" />
       <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="8.0.6" />
+      <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.0" />
       <PackageReference Include="MudBlazor" Version="6.19.1" />
+      <PackageReference Include="System.Drawing.Common" Version="8.0.6" />
       <PackageReference Include="System.Reactive" Version="6.0.1" />
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\RemoteDesktopAppService.csproj" />
-    </ItemGroup>
-
-    <ItemGroup>
       <ApplicationDefinition Remove="App.xaml" />
+      <COMReference Include="IWshRuntimeLibrary">
+        <WrapperTool>tlbimp</WrapperTool>
+        <VersionMinor>0</VersionMinor>
+        <VersionMajor>1</VersionMajor>
+        <Guid>f935dc20-1cf0-11d0-adb9-00c04fd58a0b</Guid>
+        <Lcid>0</Lcid>
+        <Isolated>false</Isolated>
+        <EmbedInteropTypes>true</EmbedInteropTypes>
+      </COMReference>
       <Page Include="App.xaml" />
     </ItemGroup>
 
